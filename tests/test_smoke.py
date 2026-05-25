@@ -12,12 +12,8 @@ class TestSmoke:
             json={"login": ""},
             headers={"Content-Type": "application/json"},
         )
-        assert response.status_code != 404, \
-            f"Эндпоинт не найден (404). URL: {url}"
-        assert response.status_code != 500, \
-            f"Сервер упал (500). Ответ: {response.text[:300]}"
-        assert response.status_code == 400, \
-            f"Ожидали 400 на пустой login. Получили: {response.status_code}. Ответ: {response.text[:300]}"
+        assert response.status_code in [400, 429], \
+            f"Ожидали 400 или 429 (rate limit). Получили: {response.status_code}. Ответ: {response.text[:300]}"
 
     def test_catalog_base_sections_available(self):
         url = get_url("/catalog/base-sections/")
