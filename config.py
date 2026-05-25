@@ -6,7 +6,7 @@ load_dotenv()
 BASE_URL = os.getenv("BASE_URL", "https://test1.galmart.kz")
 API_PREFIX = "/api/v2"
 CITY_ID = os.getenv("CITY_ID", "6737")
-PHONE = os.getenv("PHONE", "77785636893")
+PHONE = os.getenv("PHONE", "")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN", "")
 
 
