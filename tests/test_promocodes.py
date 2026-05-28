@@ -1,159 +1,74 @@
 import requests
 import pytest
-from config import get_url, get_auth_headers, CITY_ID
+from config import get_url, get_auth_headers
 
 PROMO_CODE = "TESTPROMO"
 
 
 class TestPromocodes:
-    """
-    Тесты промокодов — папка 09 из Postman-коллекции.
-    """
+    # тесты промокодов — папка 09
 
-    # ── 09.2 ──────────────────────────────────────────────────────────────
     def test_list_favorite_promos(self):
-        """
-        Список избранных промокодов — может быть пустым, главное 200.
-        """
         url = get_url("/promocode_my/favorites/")
-        response = requests.get(url, headers=get_auth_headers())
+        resp = requests.get(url, headers=get_auth_headers())
+        assert resp.status_code == 200, f"список промокодов недоступен, статус: {resp.status_code}, ответ: {resp.text[:200]}"
 
-        assert response.status_code == 200, \
-            f"Список промокодов недоступен. Статус: {response.status_code}. Ответ: {response.text[:300]}"
-
-    # ── 09.7 ──────────────────────────────────────────────────────────────
     def test_list_promos_no_auth(self):
-        """
-        Список промокодов без авторизации → 401.
-        """
         url = get_url("/promocode_my/favorites/")
-        response = requests.get(
-            url,
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code == 401, \
-            f"Промокоды доступны без токена! Статус: {response.status_code}"
+        resp = requests.get(url, headers={"Content-Type": "application/json"})
+        assert resp.status_code == 401, f"промокоды доступны без токена! статус: {resp.status_code}"
 
-    # ── 09.5 ──────────────────────────────────────────────────────────────
     def test_apply_invalid_promo(self):
-        """
-        Применение несуществующего промокода → 400 или 404.
-        """
         url = get_url("/promocode_my/apply/")
-        response = requests.get(
-            url,
-            params={"code": "INVALID_XYZ_QA_9999"},
-            headers=get_auth_headers(),
-        )
-        assert response.status_code != 500, \
-            f"Сервер упал на невалидном промокоде. Ответ: {response.text[:300]}"
-        assert response.status_code in [400, 404], \
-            f"Невалидный промокод принят! Статус: {response.status_code}. Ответ: {response.text[:300]}"
+        resp = requests.get(url, params={"code": "INVALID_XYZ_QA_9999"}, headers=get_auth_headers())
+        assert resp.status_code != 500, f"сервер упал, ответ: {resp.text[:200]}"
+        assert resp.status_code in [400, 404], f"невалидный промокод принят! статус: {resp.status_code}"
 
-    # ── 09.6 ──────────────────────────────────────────────────────────────
     def test_apply_promo_no_code_param(self):
-        """
-        Применение промокода без параметра code → 400.
-        """
+        # без параметра code — 400
         url = get_url("/promocode_my/apply/")
-        response = requests.get(url, headers=get_auth_headers())
+        resp = requests.get(url, headers=get_auth_headers())
+        assert resp.status_code != 500, f"сервер упал, ответ: {resp.text[:200]}"
+        assert resp.status_code == 400, f"запрос без code принят! статус: {resp.status_code}"
 
-        assert response.status_code != 500, \
-            f"Сервер упал без параметра code. Ответ: {response.text[:300]}"
-        assert response.status_code == 400, \
-            f"Запрос без code принят! Статус: {response.status_code}. Ответ: {response.text[:300]}"
-
-    # ── 09.8 ──────────────────────────────────────────────────────────────
     @pytest.mark.xfail(reason="BUG: DELETE несуществующего промокода возвращает 200 вместо 404", strict=True)
     def test_remove_nonexistent_promo(self):
-        """
-        Удаление несуществующего промокода из избранного → 404.
-        """
         url = get_url("/promocode_my/999999/remove_favorite/")
-        response = requests.delete(url, headers=get_auth_headers())
+        resp = requests.delete(url, headers=get_auth_headers())
+        assert resp.status_code != 500, f"сервер упал, ответ: {resp.text[:200]}"
+        assert resp.status_code in [400, 404], f"ожидали 404, статус: {resp.status_code}"
 
-        assert response.status_code != 500, \
-            f"Сервер упал. Ответ: {response.text[:300]}"
-        assert response.status_code in [400, 404], \
-            f"Ожидали 404. Статус: {response.status_code}"
-
-    # ── 09.9 ──────────────────────────────────────────────────────────────
     def test_apply_empty_code(self):
-        """
-        Пустой промокод → не 500. Сервер должен вернуть ошибку валидации.
-        """
         url = get_url("/promocode_my/apply/")
-        response = requests.get(
-            url,
-            params={"code": ""},
-            headers=get_auth_headers(),
-        )
-        assert response.status_code != 500, \
-            f"Сервер упал на пустом коде. Ответ: {response.text[:300]}"
+        resp = requests.get(url, params={"code": ""}, headers=get_auth_headers())
+        assert resp.status_code != 500, f"сервер упал на пустом коде, ответ: {resp.text[:200]}"
 
-    # ── 09.10 ─────────────────────────────────────────────────────────────
     def test_apply_very_long_code(self):
-        """
-        Очень длинный промокод (200 символов) → не 500.
-        """
+        # 200 символов — не должно быть 500
         url = get_url("/promocode_my/apply/")
-        response = requests.get(
-            url,
-            params={"code": "A" * 200},
-            headers=get_auth_headers(),
-        )
-        assert response.status_code != 500, \
-            f"Сервер упал на длинном коде. Ответ: {response.text[:300]}"
+        resp = requests.get(url, params={"code": "A" * 200}, headers=get_auth_headers())
+        assert resp.status_code != 500, f"сервер упал на длинном коде, ответ: {resp.text[:200]}"
 
-    # ── 09.11 ─────────────────────────────────────────────────────────────
     def test_apply_sql_injection_in_code(self):
-        """
-        SQL-инъекция в промокоде → не 500.
-        """
         url = get_url("/promocode_my/apply/")
-        response = requests.get(
-            url,
-            params={"code": "' OR '1'='1"},
-            headers=get_auth_headers(),
-        )
-        assert response.status_code != 500, \
-            f"Сервер упал на SQL-инъекции! Ответ: {response.text[:300]}"
+        resp = requests.get(url, params={"code": "' OR '1'='1"}, headers=get_auth_headers())
+        assert resp.status_code != 500, f"сервер упал на sql инъекции! ответ: {resp.text[:200]}"
 
-    # ── 09.3 + 09.4 ───────────────────────────────────────────────────────
     def test_add_and_remove_promo_favorite(self):
-        """
-        Добавление промокода в избранное и удаление.
-        Если промокод истёк — тест помечаем как xfail.
-        """
-        # Добавляем
+        # полный цикл: добавить и удалить промокод из избранного
         add_url = get_url("/promocode_my/add_favorite/")
-        add_response = requests.post(
-            add_url,
-            json={"code": PROMO_CODE},
-            headers=get_auth_headers(),
-        )
-        assert add_response.status_code != 500, \
-            f"Сервер упал при добавлении. Ответ: {add_response.text[:300]}"
-
-        if add_response.status_code not in [200, 201]:
-            pytest.skip(f"Промокод {PROMO_CODE} недоступен. Статус: {add_response.status_code}")
-
-        # Получаем promo_id из списка
-        list_url = get_url("/promocode_my/favorites/")
-        list_response = requests.get(list_url, headers=get_auth_headers())
-        assert list_response.status_code == 200
-
-        data = list_response.json().get("data", [])
-        assert len(data) > 0, "Промокод добавлен, но список пустой"
-
+        add_resp = requests.post(add_url, json={"code": PROMO_CODE}, headers=get_auth_headers())
+        assert add_resp.status_code != 500, f"сервер упал при добавлении, ответ: {add_resp.text[:200]}"
+        if add_resp.status_code not in [200, 201]:
+            pytest.skip(f"промокод {PROMO_CODE} недоступен, статус: {add_resp.status_code}")
+        # получаем promo_id
+        list_resp = requests.get(get_url("/promocode_my/favorites/"), headers=get_auth_headers())
+        assert list_resp.status_code == 200
+        data = list_resp.json().get("data", [])
+        assert len(data) > 0, "промокод добавлен, но список пустой"
         promo_id = data[0].get("id")
-        assert promo_id is not None, "Нет поля id в промокоде"
-
-        # Удаляем
-        del_url = get_url(f"/promocode_my/{promo_id}/remove_favorite/")
-        del_response = requests.delete(del_url, headers=get_auth_headers())
-
-        assert del_response.status_code != 500, \
-            f"Сервер упал при удалении. Ответ: {del_response.text[:300]}"
-        assert del_response.status_code in [200, 204], \
-            f"Промокод не удалился. Статус: {del_response.status_code}"
+        assert promo_id is not None, "нет поля id в промокоде"
+        # удаляем
+        del_resp = requests.delete(get_url(f"/promocode_my/{promo_id}/remove_favorite/"), headers=get_auth_headers())
+        assert del_resp.status_code != 500, f"сервер упал при удалении, ответ: {del_resp.text[:200]}"
+        assert del_resp.status_code in [200, 204], f"промокод не удалился, статус: {del_resp.status_code}"
